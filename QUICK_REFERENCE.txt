@@ -1,0 +1,166 @@
+╔══════════════════════════════════════════════════════════════════╗
+║           👁️ EYE CONTROL SYSTEM - QUICK REFERENCE CARD           ║
+╚══════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────┐
+│ ⌨️  KEYBOARD CONTROLS                                           │
+├────────────────────────────────────────────────────────────────┤
+│  C      = Calibrate (5-point, 2s each)                        │
+│  M      = Toggle Simulation ↔ Live mode                       │
+│  SPACE  = Enable/Disable cursor movement                      │
+│  ESC    = Exit application                                    │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 👁️ EYE COMMANDS - BASIC DIRECTIONS                             │
+├────────────────────────────────────────────────────────────────┤
+│  Look UP       → SCROLL_UP     (scroll page up)               │
+│  Look DOWN     → SCROLL_DOWN   (scroll page down)             │
+│  Look LEFT     → LEFT          (left arrow key)               │
+│  Look RIGHT    → RIGHT         (right arrow key)              │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 👀 BLINK COMMANDS                                              │
+├────────────────────────────────────────────────────────────────┤
+│  Blink once             → CLICK          (mouse click)        │
+│  Blink twice (< 0.6s)   → DOUBLE_CLICK   (double click)      │
+│  Close eyes 3+ seconds  → EMERGENCY_ALERT (alarm + alert)    │
+│  Close eyes 5+ seconds  → SLEEP_MODE     (rest mode)         │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ ↗️ DIAGONAL COMMANDS                                            │
+├────────────────────────────────────────────────────────────────┤
+│  Look UP-LEFT       → VOLUME_UP       (increase volume)       │
+│  Look UP-RIGHT      → BRIGHTNESS_UP   (increase brightness)   │
+│  Look DOWN-LEFT     → BACK            (browser back)          │
+│  Look DOWN-RIGHT    → HOME            (home key)              │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 🔄 SEQUENCE PATTERNS (Hold each direction 0.4s)                │
+├────────────────────────────────────────────────────────────────┤
+│  LEFT → RIGHT → LEFT    → CALL_NURSE   (beep notification)   │
+│  UP → DOWN → UP         → ADJUST_BED   (beep notification)   │
+│  (Complete within 3 seconds)                                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 📊 ON-SCREEN INDICATORS                                        │
+├────────────────────────────────────────────────────────────────┤
+│  Red Dot           = Your iris position                       │
+│  Minimap (top-right) = Gaze position on screen                │
+│  Direction Label   = Current detected direction               │
+│  EAR Value         = Eye Aspect Ratio (blink detection)       │
+│  Progress Bars     = Long actions (dwell, blink, sleep)       │
+│  Sequence Buffer   = Your movement sequence (bottom-left)     │
+│  Command Flash     = Last executed command (center-bottom)    │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ ⚙️  MODES                                                       │
+├────────────────────────────────────────────────────────────────┤
+│  SIMULATION  = Commands printed only (SAFE - default)         │
+│  LIVE        = Commands actually executed (Press M to toggle) │
+│  Status shown on screen: "Control: SIMULATION" or "LIVE"      │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 🎯 DIRECTION ZONES (Default Thresholds)                        │
+├────────────────────────────────────────────────────────────────┤
+│  LEFT zone:   0% - 35% of screen width                        │
+│  CENTER zone: 35% - 65% of screen width                       │
+│  RIGHT zone:  65% - 100% of screen width                      │
+│                                                                │
+│  UP zone:     0% - 30% of screen height                       │
+│  MIDDLE zone: 30% - 70% of screen height                      │
+│  DOWN zone:   70% - 100% of screen height                     │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ ⏱️  TIMING SETTINGS                                             │
+├────────────────────────────────────────────────────────────────┤
+│  Command Cooldown:    0.8s  (between any commands)            │
+│  Gesture Cooldown:    0.5s  (between direction gestures)      │
+│  Direction Hold:      0.4s  (to register for sequence)        │
+│  Sequence Timeout:    3.0s  (complete pattern within)         │
+│  Long Blink:          3.0s  (emergency alert trigger)         │
+│  Sleep Mode:          5.0s  (eyes closed duration)            │
+│  Double Blink Window: 0.6s  (between two blinks)              │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 🔧 QUICK CUSTOMIZATION (in code)                               │
+├────────────────────────────────────────────────────────────────┤
+│  Easier blinks:           EAR_THRESHOLD = 0.23 (vs 0.21)      │
+│  Wider center zone:       LOOK_LEFT_THRESHOLD = 0.40          │
+│                          LOOK_RIGHT_THRESHOLD = 0.60          │
+│  Slower, safer:          COMMAND_COOLDOWN = 1.5               │
+│  More time for sequence: SEQUENCE_TIMEOUT = 5.0               │
+│  Disable feature:        ENABLE_BASIC_CONTROLS = False        │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 🐛 TROUBLESHOOTING                                             │
+├────────────────────────────────────────────────────────────────┤
+│  No face detected      → Check lighting, center face          │
+│  Blinks not working    → Adjust EAR_THRESHOLD (lower)         │
+│  Directions inaccurate → Press C to calibrate                 │
+│  Too many false cmds   → Increase COMMAND_COOLDOWN            │
+│  Sequences timeout     → Increase SEQUENCE_TIMEOUT            │
+│  Commands too slow     → Decrease cooldown timers             │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ ⚠️  SAFETY CHECKLIST                                            │
+├────────────────────────────────────────────────────────────────┤
+│  ✓ Always start in SIMULATION mode                            │
+│  ✓ Complete calibration (press C)                             │
+│  ✓ Practice all gestures before live mode                     │
+│  ✓ Test emergency alert with sound OFF first                  │
+│  ✓ Have caregiver present for initial use (medical)           │
+│  ✓ Take 5-minute breaks every 15 minutes                      │
+│  ✓ Keep backup communication system available                 │
+│  ✓ Press ESC to exit anytime                                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 🚀 FIRST RUN SEQUENCE                                          │
+├────────────────────────────────────────────────────────────────┤
+│  1. python eye_control_assistive.py                           │
+│  2. Press C to calibrate (look at 5 points, 2s each)          │
+│  3. Test: Look UP → see "COMMAND: SCROLL_UP"                  │
+│  4. Test: Blink once → see "COMMAND: CLICK"                   │
+│  5. Test: LEFT→RIGHT→LEFT → see "COMMAND: CALL_NURSE"         │
+│  6. All working? Press M to switch to LIVE mode               │
+│  7. Test ONE command in live mode                             │
+│  8. Success! Ready for full use                               │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 📚 DOCUMENTATION FILES                                         │
+├────────────────────────────────────────────────────────────────┤
+│  USER_GUIDE.md             → Complete usage instructions      │
+│  TESTING_GUIDE.md          → Testing procedures & validation  │
+│  config_commands.txt       → All settings explained           │
+│  IMPLEMENTATION_SUMMARY.md → Feature overview                 │
+│  QUICK_REFERENCE.txt       → This file                        │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 💡 PRO TIPS                                                    │
+├────────────────────────────────────────────────────────────────┤
+│  • Exaggerate movements initially (look to far edges)         │
+│  • Hold gaze steady in zones for sequences                    │
+│  • Blink deliberately (not too fast)                          │
+│  • Use the minimap to see your gaze position                  │
+│  • Watch EAR value to understand your blink pattern           │
+│  • Good lighting = better tracking                            │
+│  • Calibrate at start of each session                         │
+│  • Document your preferred settings                           │
+└────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════╗
+║  Made with ❤️ for assistive technology - Control with your eyes! ║
+╚══════════════════════════════════════════════════════════════════╝

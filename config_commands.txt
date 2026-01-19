@@ -1,0 +1,134 @@
+=================================================
+EYE CONTROL ASSISTIVE DEVICE - CONFIGURATION
+=================================================
+
+COMMAND SYSTEM SETTINGS
+-----------------------
+
+1. SIMULATION MODE (Safe for Testing)
+   SIMULATION_MODE = True
+   - When True: Commands are printed to console only
+   - When False: Real keyboard/mouse commands are executed
+   - Toggle during runtime: Press 'M' key
+
+2. ENABLE/DISABLE COMMAND GROUPS
+   ENABLE_BASIC_CONTROLS = True      # UP/DOWN/LEFT/RIGHT scrolling
+   ENABLE_ADVANCED_CONTROLS = True   # Blinks, diagonals
+   ENABLE_ASSISTIVE_CONTROLS = True  # Emergency, sequences
+   ENABLE_AUDIO_FEEDBACK = True      # Beep sounds on commands
+
+3. BLINK DETECTION SETTINGS
+   EAR_THRESHOLD = 0.21              # Lower = easier to trigger
+   BLINK_FRAMES = 2                  # Frames needed for valid blink
+   DOUBLE_BLINK_WINDOW = 0.6         # Seconds between blinks
+   LONG_BLINK_TIME = 3.0             # Seconds for emergency alert
+   EYES_CLOSED_SLEEP = 5.0           # Seconds for sleep mode
+
+4. DIRECTION THRESHOLDS (0.0 - 1.0 normalized screen)
+   LOOK_LEFT_THRESHOLD = 0.35        # Left 35% of screen
+   LOOK_RIGHT_THRESHOLD = 0.65       # Right 65% of screen
+   LOOK_UP_THRESHOLD = 0.30          # Top 30% of screen
+   LOOK_DOWN_THRESHOLD = 0.70        # Bottom 70% of screen
+
+5. TIMING & SAFETY
+   GESTURE_COOLDOWN = 0.5            # Seconds between gestures
+   COMMAND_COOLDOWN = 0.8            # Seconds between commands
+   SEQUENCE_TIMEOUT = 3.0            # Seconds to complete sequence
+   DIRECTION_HOLD_TIME = 0.4         # Hold time to register direction
+
+=================================================
+COMMAND MAPPING REFERENCE
+=================================================
+
+BASIC DIRECTION CONTROLS:
+-------------------------
+Look UP        → SCROLL_UP (scroll up on page)
+Look DOWN      → SCROLL_DOWN (scroll down on page)
+Look LEFT      → LEFT (left arrow key)
+Look RIGHT     → RIGHT (right arrow key)
+
+BLINK CONTROLS:
+---------------
+Single Blink         → CLICK (mouse click)
+Double Blink         → DOUBLE_CLICK (double click)
+Long Blink (3s)      → EMERGENCY_ALERT (alarm sound + alert)
+Eyes Closed (5s)     → SLEEP_MODE (enter rest mode)
+
+DIAGONAL CONTROLS:
+------------------
+Look UP-LEFT         → VOLUME_UP
+Look UP-RIGHT        → BRIGHTNESS_UP
+Look DOWN-LEFT       → BACK (browser back)
+Look DOWN-RIGHT      → HOME (home key)
+
+SEQUENCE PATTERNS:
+------------------
+LEFT → RIGHT → LEFT  → CALL_NURSE (beep notification)
+UP → DOWN → UP       → ADJUST_BED (adjustment request)
+
+=================================================
+USAGE TIPS
+=================================================
+
+1. CALIBRATION:
+   - Press 'C' to start 5-point calibration
+   - Look at each point for 2 seconds
+   - Improves accuracy significantly
+
+2. TESTING NEW COMMANDS:
+   - Keep SIMULATION_MODE = True initially
+   - Practice sequences and blinks
+   - Monitor console output
+   - Switch to LIVE mode when comfortable
+
+3. FOR PARALYSIS PATIENTS:
+   - Start with basic controls only
+   - Enable advanced controls after practice
+   - Customize thresholds based on patient's range of motion
+   - Test emergency alert with caregiver present
+
+4. ADJUSTING SENSITIVITY:
+   - Eyes close too easily? Lower EAR_THRESHOLD (0.18-0.20)
+   - Direction too sensitive? Adjust LOOK_* thresholds
+   - Commands too fast? Increase COMMAND_COOLDOWN
+   - Sequences timeout? Increase SEQUENCE_TIMEOUT
+
+5. TROUBLESHOOTING:
+   - No face detected: Check lighting and camera
+   - Blinks not working: Adjust EAR_THRESHOLD
+   - Directions not accurate: Run calibration (C key)
+   - False commands: Increase cooldown times
+
+=================================================
+CUSTOMIZATION EXAMPLE
+=================================================
+
+For a patient with limited eye movement:
+- LOOK_LEFT_THRESHOLD = 0.40 (wider center zone)
+- LOOK_RIGHT_THRESHOLD = 0.60
+- DIRECTION_HOLD_TIME = 0.6 (longer hold)
+- COMMAND_COOLDOWN = 1.2 (prevent accidents)
+
+For experienced user wanting faster control:
+- GESTURE_COOLDOWN = 0.3 (faster response)
+- COMMAND_COOLDOWN = 0.5
+- DIRECTION_HOLD_TIME = 0.3 (quick sequences)
+
+=================================================
+SAFETY NOTES
+=================================================
+
+⚠️  IMPORTANT:
+- Always start in SIMULATION_MODE
+- Test emergency alerts with sound off initially
+- Have a caregiver present during first use
+- Keep ESC key accessible for quick exit
+- Monitor for eye strain (take breaks)
+
+🏥 MEDICAL USE:
+- Consult healthcare professional before deployment
+- Customize settings for each patient
+- Document patient's preferred settings
+- Regular breaks recommended (15 min/hour)
+
+=================================================
