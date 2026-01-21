@@ -504,6 +504,6 @@ python eye_control_optimized.py
 
 **Version:** 2.0 (Optimized)
 **Date:** January 8, 2026
-**Author:** Enhanced by GitHub Copilot
+
 
 **🎉 Happy Tracking! 👁️**
