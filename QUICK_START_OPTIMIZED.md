@@ -289,24 +289,16 @@ Keep an eye on the on-screen metrics:
 
 ---
 
-## 📞 Need Help?
+##  Need Help?
 
 ### **Check These Files:**
 1. `OPTIMIZATION_GUIDE.md` - Comprehensive guide
 2. `config_presets.py` - Ready-made configurations
 3. `performance_comparison.py` - Benchmark tool
-
-### **Common Issues:**
-- **Low FPS**: Use power_saver preset
-- **False triggers**: Enable intent detection
-- **Jittery**: Enable Kalman filter
-- **Laggy**: Reduce dwell time
-
 ---
 
 ## 🚀 Summary
 
-**You now have:**
 1. ✅ **65% faster** processing
 2. ✅ **66% lower** CPU usage
 3. ✅ **40% better** accuracy (Kalman)
