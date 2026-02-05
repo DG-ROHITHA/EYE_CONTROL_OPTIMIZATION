@@ -545,25 +545,8 @@ confidence = base_confidence (0.5)
 
 ---
 
-## 📞 SUPPORT
 
-### **Common Questions**
-
-**Q: Why is my FPS low?**
-A: Increase SKIP_FRAMES, reduce resolution, enable ROI.
-
-**Q: Commands trigger accidentally?**
-A: Increase INTENTIONAL_GAZE_DURATION, enable intent detection.
-
-**Q: System is too sensitive?**
-A: Increase velocity thresholds and duration requirements.
-
-**Q: Can I use this for gaming?**
-A: Yes! Use the gaming configuration profile above.
-
----
-
-## 📄 LICENSE & CREDITS
+## 📄 LICENSE 
 
 This optimization builds upon:
 - MediaPipe (Google)
@@ -571,7 +554,6 @@ This optimization builds upon:
 - NumPy
 - Original eye_control_assistive.py
 
-**Author:** Enhanced by GitHub Copilot
 **Date:** January 2026
 **Version:** 2.0 (Optimized)
 
