@@ -135,49 +135,9 @@ python eye_control_assistive.py
 
 ---
 
-## ⚙️ Customization
 
-### **Edit Settings in Code:**
 
-Open `eye_control_assistive.py` and modify the `Config` class:
 
-```python
-class Config:
-    # Make blink detection more/less sensitive
-    EAR_THRESHOLD = 0.21  # Lower = easier to trigger (0.18-0.25)
-    
-    # Change direction zones
-    LOOK_LEFT_THRESHOLD = 0.35  # Increase for smaller left zone
-    LOOK_RIGHT_THRESHOLD = 0.65  # Decrease for smaller right zone
-    
-    # Adjust timing
-    COMMAND_COOLDOWN = 0.8  # Increase to prevent accidental repeats
-    LONG_BLINK_TIME = 3.0   # Time needed for emergency alert
-    
-    # Enable/Disable features
-    ENABLE_BASIC_CONTROLS = True      # Direction controls
-    ENABLE_ADVANCED_CONTROLS = True   # Blinks & diagonals
-    ENABLE_ASSISTIVE_CONTROLS = True  # Emergency & sequences
-    ENABLE_AUDIO_FEEDBACK = True      # Beep sounds
-```
-
-### **Common Adjustments:**
-
-**For Limited Eye Movement:**
-```python
-LOOK_LEFT_THRESHOLD = 0.40    # Wider center zone
-LOOK_RIGHT_THRESHOLD = 0.60
-DIRECTION_HOLD_TIME = 0.6     # Longer hold time
-```
-
-**For Faster Control:**
-```python
-GESTURE_COOLDOWN = 0.3        # Quick response
-COMMAND_COOLDOWN = 0.5
-DIRECTION_HOLD_TIME = 0.3     # Fast sequences
-```
-
----
 
 ## 🔧 Troubleshooting
 
@@ -196,73 +156,9 @@ DIRECTION_HOLD_TIME = 0.3     # Fast sequences
 - ✅ Run calibration (press C)
 - ✅ Check camera is centered on your face
 - ✅ Adjust direction thresholds in code
-
-### **Problem: Too Many False Commands**
-- ✅ Increase `COMMAND_COOLDOWN` value
-- ✅ Increase `DIRECTION_HOLD_TIME`
-- ✅ Narrow direction zones (adjust thresholds)
-
-### **Problem: Commands Too Slow**
-- ✅ Decrease cooldown timers
-- ✅ Decrease `DIRECTION_HOLD_TIME`
-- ✅ Practice holding gaze steady in zones
-
 ---
 
-## 🏥 For Paralysis Patients
 
-### **Recommended Setup Process:**
-
-**Week 1: Basic Training**
-1. Start with SIMULATION_MODE = True
-2. Enable only BASIC_CONTROLS
-3. Practice 15 minutes daily
-4. Focus on consistent eye movements
-
-**Week 2: Advanced Features**
-5. Enable ADVANCED_CONTROLS
-6. Practice single blinks for clicking
-7. Try diagonal movements
-8. Still in simulation mode
-
-**Week 3: Sequences**
-9. Enable ASSISTIVE_CONTROLS
-10. Practice emergency alert sequence
-11. Test nurse call pattern
-12. Build muscle memory
-
-**Week 4: Live Deployment**
-13. Switch to LIVE mode with supervision
-14. Start with simple tasks
-15. Document preferred settings
-16. Establish break schedule
-
-### **Safety Protocols:**
-
-✅ **Always have caregiver present initially**
-✅ **Test emergency alert with sound off first**
-✅ **Take 5-minute breaks every 15 minutes**
-✅ **Keep traditional call system as backup**
-✅ **Document any eye strain immediately**
-✅ **Re-calibrate if feeling discomfort**
-
-### **Customization for Patients:**
-
-```python
-# Gentler settings for beginners
-COMMAND_COOLDOWN = 1.5        # Slower, safer
-LONG_BLINK_TIME = 4.0         # More time for emergency
-EAR_THRESHOLD = 0.19          # Easier blink detection
-DIRECTION_HOLD_TIME = 0.7     # Longer to prevent accidents
-
-# Wider center "neutral" zone
-LOOK_LEFT_THRESHOLD = 0.40
-LOOK_RIGHT_THRESHOLD = 0.60
-LOOK_UP_THRESHOLD = 0.35
-LOOK_DOWN_THRESHOLD = 0.65
-```
-
----
 
 ## 📝 Command Log
 
@@ -277,36 +173,6 @@ All commands are logged with timestamps. Check your console output:
 
 ---
 
-## 🆘 Emergency Procedures
-
-### **If System Becomes Unresponsive:**
-1. Press **ESC** key to exit immediately
-2. Close application window
-3. Restart application if needed
-
-### **If Emergency Alert Triggered Accidentally:**
-- It will stop after 3 beeps
-- No permanent action taken
-- Just a sound notification
-
-### **If Patient Cannot Exit:**
-- Caregiver: Press ESC on keyboard
-- Application auto-stops if camera fails
-- Window close button also works
-
----
-
-## 📞 Support & Further Customization
-
-For advanced customization or issues:
-
-1. Check `config_commands.txt` for all settings
-2. Review code comments in `eye_control_assistive.py`
-3. Modify `Config` class for your specific needs
-4. Test changes in SIMULATION_MODE first
-
----
-
 ## 🎓 Best Practices
 
 1. **Always calibrate** when starting a session
@@ -314,22 +180,7 @@ For advanced customization or issues:
 3. **Take regular breaks** to prevent eye strain
 4. **Good lighting** improves tracking significantly
 5. **Consistent positioning** of camera and user
-6. **Document** what works best for each user
-7. **Gradual progression** from basic to advanced features
-8. **Backup systems** should always be available for critical needs
-
 ---
 
-## ✨ Tips for Success
 
-- **Exaggerate movements** initially (look to far edges)
-- **Hold gaze steady** for sequences (don't rush)
-- **Practice blinking deliberately** (not too fast)
-- **Use the minimap** to see your gaze position
-- **Watch the EAR value** to understand your blink pattern
-- **Establish routines** for common tasks
-- **Customize thresholds** to your natural eye movement
-
----
-
-**Remember:** This is an assistive tool. Start slow, practice safely, and customize to individual needs. Success comes with patience and proper configuration! 💪
+**Remember:** This is an assistive tool. 
