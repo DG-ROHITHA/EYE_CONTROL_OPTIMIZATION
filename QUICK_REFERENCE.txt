@@ -158,9 +158,9 @@
 │  • Watch EAR value to understand your blink pattern           │
 │  • Good lighting = better tracking                            │
 │  • Calibrate at start of each session                         │
-│  • Document your preferred settings                           │
+│                           │
 └────────────────────────────────────────────────────────────────┘
 
 ╔══════════════════════════════════════════════════════════════════╗
-║  Made with ❤️ for assistive technology - Control with your eyes! ║
+║   for assistive technology - Control with your eyes!             ║
 ╚══════════════════════════════════════════════════════════════════╝
