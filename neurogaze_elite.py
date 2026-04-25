@@ -28,6 +28,13 @@ from command_worker import CommandWorkerProcess, CommandType, cross_platform_bee
 from hud_renderer import HUDRenderer, HUDMode
 from dl_inference import DLInferenceEngine, CrossValidationResult
 
+# Hand gesture modules
+from hand_gesture_engine import HandGestureEngine, GestureConfig as HandGestureConfig
+from gesture_fusion import GazeFusionEngine, FusionConfig, FusionMode, IntentScore as FusionIntentScore
+from gesture_calibration import HandProfileCalibrator, CalibrationState
+from gesture_hud import GestureHUDRenderer, GestureDisplayInfo, HUDMode as GestureHUDMode
+from gesture_command_map import GestureCommandMapper
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -149,6 +156,43 @@ class NeuroGazeElite:
             frame_height=int(self.camera_height),
             mode=hud_mode_map.get(hud_mode, HUDMode.STANDARD)
         )
+        
+        # Hand Gesture Modules (NEW: eye-hand fusion for safer control)
+        logger.info("\n🖐️  Initializing hand gesture control...")
+        
+        # Hand gesture detection (MediaPipe Hands with GPU)
+        hand_gesture_config = HandGestureConfig()
+        self.hand_engine = HandGestureEngine(
+            config=hand_gesture_config,
+            enable_gpu=enable_gpu
+        )
+        
+        # Gesture command mapper (YAML-driven mapping)
+        self.gesture_mapper = GestureCommandMapper()
+        
+        # Hand-eye fusion engine (combines intent signals)
+        fusion_config = FusionConfig(
+            fusion_mode=FusionMode.EYE_LEADS_HAND_CONFIRMS  # Safest for paralysis patients
+        )
+        self.fusion_engine = GazeFusionEngine(fusion_config)
+        
+        # Hand calibration (per-user normalization)
+        self.hand_calibrator = HandProfileCalibrator()
+        self.hand_profile = self.hand_calibrator.load_profile(self.current_user_id)
+        if not self.hand_profile:
+            logger.info("ℹ️  No hand profile found; hand calibration required on first run (press 'H')")
+        
+        # Gesture HUD overlay renderer
+        self.gesture_hud = GestureHUDRenderer(
+            frame_width=int(self.camera_width),
+            frame_height=int(self.camera_height),
+            mode=GestureHUDMode.STANDARD
+        )
+        
+        # Hand gesture state tracking
+        self.hand_calibration_active = False
+        self.gesture_overlay_visible = True
+        self.current_gesture_result = None
         
         # State tracking
         self.frame_count = 0
@@ -361,6 +405,25 @@ class NeuroGazeElite:
             self.hud_renderer.reset_heatmap()
             self.strain_guard.reset_frame_counters()
         
+        elif key == ord('g') or key == ord('G'):
+            # Toggle gesture overlay (NEW)
+            self.gesture_overlay_visible = not self.gesture_overlay_visible
+            self.gesture_hud.toggle_landmarks()
+            logger.info(f"Gesture overlay: {'visible' if self.gesture_overlay_visible else 'hidden'}")
+        
+        elif key == ord('f') or key == ord('F'):
+            # Cycle fusion mode (NEW)
+            modes = [
+                FusionMode.EYE_LEADS_HAND_CONFIRMS,
+                FusionMode.HAND_LEADS_EYE_CONFIRMS,
+                FusionMode.PARALLEL,
+                FusionMode.HAND_OVERRIDE
+            ]
+            current_idx = modes.index(self.fusion_engine.config.fusion_mode)
+            next_mode = modes[(current_idx + 1) % len(modes)]
+            self.fusion_engine.set_fusion_mode(next_mode)
+            logger.info(f"Fusion mode: {next_mode.value}")
+        
         elif key == ord(' '):
             # Toggle HUD mode
             modes = [HUDMode.MINIMAL, HUDMode.STANDARD, HUDMode.DEBUG]
@@ -431,6 +494,8 @@ class NeuroGazeElite:
         logger.info("  M - Toggle Live/Simulation mode")
         logger.info("  H - Toggle gaze heatmap")
         logger.info("  B - Toggle blue-light filter")
+        logger.info("  G - Toggle gesture overlay")
+        logger.info("  F - Cycle fusion mode (eye/hand/fused)")
         logger.info("  R - Reset session")
         logger.info("  SPACE - Cycle HUD modes")
         logger.info("  ESC - Exit")
@@ -514,6 +579,43 @@ class NeuroGazeElite:
                             dwell_duration_ms=dwell_duration_ms
                         )
                         
+                        # Hand Gesture Detection & Fusion (NEW)
+                        gesture_results = self.hand_engine.process_frame(frame)
+                        gesture_result = gesture_results[0] if gesture_results else None
+                        self.current_gesture_result = gesture_result
+                        
+                        # Process hand calibration if active
+                        if self.hand_calibration_active and gesture_result:
+                            hand_size = (
+                                (gesture_result.hand.bounding_box[2] - gesture_result.hand.bounding_box[0])**2 +
+                                (gesture_result.hand.bounding_box[3] - gesture_result.hand.bounding_box[1])**2
+                            ) ** 0.5
+                            self.hand_calibrator.add_sample(gesture_result.hand.landmarks, hand_size)
+                        
+                        # Fuse eye and hand signals
+                        if intent_score:
+                            fusion_intent = FusionIntentScore(
+                                confidence=intent_score.confidence,
+                                level=intent_score.level,
+                                position=gaze_position,
+                                velocity=gaze_velocity,
+                                dwell_duration_ms=dwell_duration_ms
+                            )
+                        else:
+                            fusion_intent = None
+                        
+                        fusion_result = self.fusion_engine.fuse(
+                            intent_score=fusion_intent,
+                            gesture_result=gesture_result,
+                            screen_width=int(self.camera_width),
+                            screen_height=int(self.camera_height)
+                        )
+                        
+                        # Route fused command to gatekeeper
+                        if fusion_result.should_execute and fusion_result.command:
+                            self.command_gatekeeper.enqueue(fusion_result.command)
+                            logger.debug(f"Fused command: {fusion_result.command.value} (source: {fusion_result.source})")
+                        
                         # Process calibration if active
                         if self.calibration_active:
                             self._process_calibration(gaze_pos[0], gaze_pos[1])
@@ -540,6 +642,32 @@ class NeuroGazeElite:
                     backend_info=self.cuda_pipeline.get_backend_info(),
                     mode_info=f"{'LIVE' if self.live_mode else 'SIM'} - {self.cuda_pipeline.backend.value}"
                 )
+                
+                # Add Hand Gesture Overlay (NEW)
+                if self.gesture_overlay_visible and self.current_gesture_result:
+                    gesture_display_info = GestureDisplayInfo(
+                        gesture_name=self.current_gesture_result.gesture_type.value,
+                        confidence=self.current_gesture_result.confidence,
+                        hand_position=self.current_gesture_result.hand_position,
+                        handedness=self.current_gesture_result.hand.handedness
+                    )
+                    
+                    hand_landmarks = [
+                        (lm.x, lm.y) for lm in self.current_gesture_result.hand.landmarks
+                    ]
+                    
+                    display_frame = self.gesture_hud.render_hand_overlay(
+                        frame=display_frame,
+                        hand_landmarks=hand_landmarks,
+                        gesture_info=gesture_display_info,
+                        fusion_mode=self.fusion_engine.config.fusion_mode.value,
+                        diagnostics={
+                            "hands_detected": 1,
+                            "fps": avg_fps,
+                            "inference_ms": self.hand_engine._get_avg_inference_time(),
+                            "confidence": self.current_gesture_result.confidence
+                        }
+                    )
                 
                 # Display
                 cv2.imshow("NeuroGaze Elite", display_frame)
