@@ -26,6 +26,7 @@ from kalman_gaze import KalmanGaze, KalmanState
 from intent_engine import IntentEngine, CommandGatekeeper, IntentLevel
 from command_worker import CommandWorkerProcess, CommandType, cross_platform_beep
 from hud_renderer import HUDRenderer, HUDMode
+from dl_inference import DLInferenceEngine, CrossValidationResult
 
 # Configure logging
 logging.basicConfig(
@@ -33,6 +34,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Platform-specific flags
+CV2_AVAILABLE = True  # OpenCV is required anyway, but check for safety
 
 
 class NeuroGazeElite:
@@ -87,6 +91,13 @@ class NeuroGazeElite:
         
         # MediaPipe FaceLandmarker (with GPU delegate if available)
         self._init_mediapipe()
+        
+        # Deep Learning Inference (secondary gaze validation with ONNX)
+        self.dl_engine = DLInferenceEngine(
+            model_name="l2cs-net-gaze360",
+            agreement_threshold_px=15.0,
+            enable_gpu=enable_gpu
+        )
         
         # Gaze tracking (Kalman filter with velocity)
         self.gaze_tracker = KalmanGaze(
@@ -278,6 +289,44 @@ class NeuroGazeElite:
         except:
             return 0.5
     
+    def _estimate_head_pose(self, face_landmarks) -> Tuple[float, float, float]:
+        """
+        Estimate head pose (pitch, yaw, roll) from face landmarks.
+        Uses MediaPipe face landmarks for rough estimation.
+        
+        Returns:
+            (pitch, yaw, roll) in radians
+        """
+        try:
+            # Key landmarks for pose estimation
+            # Nose tip: 1
+            # Chin: 152
+            # Left eye outer: 33
+            # Right eye outer: 263
+            # Left mouth: 61
+            # Right mouth: 291
+            
+            nose = face_landmarks[1]
+            chin = face_landmarks[152]
+            left_eye = face_landmarks[33]
+            right_eye = face_landmarks[263]
+            
+            # Simple vertical gaze (pitch) from nose to chin
+            pitch = np.arctan2(chin.y - nose.y, chin.x - nose.x)
+            
+            # Horizontal gaze (yaw) from left to right eye
+            yaw = np.arctan2(right_eye.x - left_eye.x, right_eye.y - left_eye.y)
+            
+            # Roll is harder without a full 3D model - estimate from eye level
+            left_eye_y = face_landmarks[33].y
+            right_eye_y = face_landmarks[263].y
+            roll = np.arctan2(right_eye_y - left_eye_y, 1.0)
+            
+            return (pitch, yaw, roll)
+        except:
+            # Fallback to neutral pose
+            return (0.0, 0.0, 0.0)
+    
     def _handle_keyboard_input(self, key: int) -> bool:
         """
         Handle keyboard input.
@@ -423,6 +472,33 @@ class NeuroGazeElite:
                         kalman_state = self.gaze_tracker.update_gaze(gaze_pos[0], gaze_pos[1])
                         gaze_position = kalman_state.position
                         gaze_velocity = kalman_state.velocity
+                        
+                        # Deep Learning cross-validation (secondary gaze model)
+                        # Extract head pose from face landmarks if available
+                        head_pose_euler = self._estimate_head_pose(face_landmarks)
+                        
+                        # Run DL inference for secondary validation
+                        dl_result = self.dl_engine.infer(
+                            face_frame=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) if CV2_AVAILABLE else frame,
+                            head_pose_euler=head_pose_euler
+                        )
+                        
+                        # Cross-validate DL vs MediaPipe
+                        validation_result = self.dl_engine.cross_validate(
+                            dl_result=dl_result,
+                            mediapipe_point=gaze_pos,
+                            screen_width=int(self.camera_width),
+                            screen_height=int(self.camera_height)
+                        )
+                        
+                        # Use consensus point if models disagree
+                        if not validation_result.is_confident and dl_result is not None:
+                            logger.warning(
+                                f"⚠ Low DL-MP agreement: {validation_result.agreement_pixels:.1f}px "
+                                f"(DL conf: {dl_result.confidence:.2f})"
+                            )
+                            # Flag for HUD display
+                            gaze_position = validation_result.consensus_point
                         
                         # Calculate EAR (blink detection)
                         ear_value = self._calculate_ear(face_landmarks)
