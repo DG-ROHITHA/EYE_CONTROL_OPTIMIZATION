@@ -1,0 +1,117 @@
+# NeuroGaze Elite - Requirements with CUDA/GPU Support
+# Install with: pip install -r requirements_cuda.txt
+
+# Core Vision & ML
+opencv-contrib-python>=4.8.0          # Computer vision with CUDA support
+mediapipe>=0.10.0                      # Google's MediaPipe for face detection
+
+# GPU Computing - CUDA
+cupy-cuda11x>=12.0                     # CuPy for GPU-accelerated NumPy operations
+                                       # Replace 11x with: 11x (CUDA 11.x), 12x (CUDA 12.x)
+
+# Numerical Computing
+numpy>=1.24.0                          # Numerical arrays
+scipy>=1.10.0                          # Scientific computing
+
+# System Control & Automation
+pyautogui>=0.9.53                      # Mouse/keyboard automation
+keyboard>=0.13.5                       # Keyboard event handling
+mouse>=0.7.1                           # Mouse event handling
+
+# Audio
+sounddevice>=0.4.6                     # Cross-platform audio (fallback for beeping)
+numpy>=1.24.0                          # Required by sounddevice
+
+# Plotting & Visualization (optional, for testing)
+matplotlib>=3.7.0                      # Plotting library
+opencv-python-headless>=4.8.0          # Headless OpenCV (for servers)
+
+# Data & Serialization
+pydantic>=2.0                          # Data validation
+python-dotenv>=1.0                     # Environment configuration
+
+# Logging & Monitoring
+tqdm>=4.65.0                           # Progress bars
+
+# Development & Testing (optional)
+pytest>=7.4.0                          # Testing framework
+black>=23.0                            # Code formatting
+flake8>=6.0                            # Code linting
+mypy>=1.4.0                            # Type checking
+
+# Performance Monitoring
+psutil>=5.9.0                          # System and process utilities
+
+# ============================================
+# GPU-SPECIFIC NOTES
+# ============================================
+
+# CUDA Installation:
+# 1. Download NVIDIA CUDA Toolkit: https://developer.nvidia.com/cuda-downloads
+# 2. Download cuDNN: https://developer.nvidia.com/cudnn
+# 3. Add CUDA to PATH (Windows: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.x\bin)
+
+# CuPy Installation:
+# - For CUDA 11.x: pip install cupy-cuda11x
+# - For CUDA 12.x: pip install cupy-cuda12x
+# - Test: python -c "import cupy; print(cupy.cuda.runtime.getDeviceCount())"
+
+# OpenCV with CUDA:
+# - Pre-built wheels usually have CUDA disabled
+# - Build from source: https://github.com/opencv/opencv-python
+#   With cmake flag: -D WITH_CUDA=ON -D CUDA_TOOLKIT_ROOT_DIR=/path/to/cuda
+
+# TensorRT (Optional - for ONNX model inference):
+# tensorrt>=8.6.0                      # NVIDIA TensorRT for model optimization
+
+# ONNX (Optional - for cross-validation with secondary gaze model):
+# onnx>=1.15.0                         # ONNX model format
+# onnxruntime-gpu>=1.15.0              # ONNX Runtime with GPU support
+# Optional: download L2CS-Net or MPIIFaceGaze ONNX models for gaze verification
+
+# ============================================
+# INSTALLATION INSTRUCTIONS
+# ============================================
+
+# Quick Start (CPU only - for testing):
+# $ pip install opencv-python mediapipe numpy pyautogui sounddevice
+
+# Full GPU-Accelerated Install:
+# 1. Install CUDA and cuDNN (see notes above)
+# 2. $ pip install -r requirements_cuda.txt
+# 3. Verify: $ python -c "import cv2; import cupy; print('GPU ready!')"
+
+# Alternative: Docker (recommended for consistent environments)
+# Build: docker build -t neurogaze-elite .
+# Run: docker run --gpus all -it neurogaze-elite
+
+# Virtual Environment Setup:
+# $ python -m venv neurogaze_env
+# $ source neurogaze_env/bin/activate  # Linux/Mac
+# $ neurogaze_env\Scripts\activate.bat # Windows
+# $ pip install --upgrade pip
+# $ pip install -r requirements_cuda.txt
+
+# ============================================
+# TROUBLESHOOTING
+# ============================================
+
+# CuPy import fails:
+#   - Verify CUDA installation: nvcc --version
+#   - Check PATH includes CUDA bin directory
+#   - Try: python -c "import cupy; cupy.cuda.Device()"
+
+# OpenCV CUDA modules not found:
+#   - Check: cv2.cuda.getCudaEnabledDeviceCount()
+#   - May need to rebuild OpenCV from source with CUDA support
+
+# MediaPipe GPU delegate fails:
+#   - Fallback to CPU automatically (no action needed)
+#   - Check: python -c "import mediapipe; print(mediapipe.__version__)"
+
+# PyAutoGUI requires admin privileges on some systems:
+#   - Run with elevated permissions or use simulation mode
+
+# Conflicts with system packages:
+#   - Use virtual environment to isolate dependencies
+#   - Don't install globally unless necessary
