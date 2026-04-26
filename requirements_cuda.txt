@@ -10,8 +10,9 @@ l2cs>=0.1.1                            # L2CS-Net pipeline wrapper
 gdown>=5.2.0                           # Google Drive downloads for L2CS weights
 
 # GPU Computing - CUDA
-cupy-cuda11x>=12.0                     # CuPy for GPU-accelerated NumPy operations
-                                       # Replace 11x with: 11x (CUDA 11.x), 12x (CUDA 12.x)
+# cupy-cuda11x>=12.0                   # CUDA 11.x users
+# cupy-cuda12x>=12.0                   # CUDA 12.x users - uncomment the one that matches your CUDA
+# To check your CUDA version: nvcc --version
 
 # Numerical Computing
 numpy>=1.24.0                          # Numerical arrays
@@ -28,13 +29,14 @@ numpy>=1.24.0                          # Required by sounddevice
 
 # Plotting & Visualization (optional, for testing)
 matplotlib>=3.7.0                      # Plotting library
-opencv-python-headless>=4.8.0          # Headless OpenCV (for servers)
 
 # Data & Serialization
 pydantic>=2.0                          # Data validation
 python-dotenv>=1.0                     # Environment configuration
-PyYAML>=6.0                            # YAML config files
+pyyaml>=6.0                            # YAML config files
 requests>=2.31.0                       # Webhook delivery
+onnx>=1.15.0                           # ONNX model format
+onnxruntime-gpu>=1.16.0                # ONNX Runtime with GPU support
 
 # Logging & Monitoring
 tqdm>=4.65.0                           # Progress bars
