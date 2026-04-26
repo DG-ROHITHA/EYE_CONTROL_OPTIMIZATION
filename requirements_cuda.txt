@@ -4,6 +4,10 @@
 # Core Vision & ML
 opencv-contrib-python>=4.8.0          # Computer vision with CUDA support
 mediapipe>=0.10.0                      # Google's MediaPipe for face detection
+torch>=2.0.0                           # PyTorch for L2CS-Net
+torchvision>=0.15.0                    # Model backbones for L2CS-Net
+l2cs>=0.1.1                            # L2CS-Net pipeline wrapper
+gdown>=5.2.0                           # Google Drive downloads for L2CS weights
 
 # GPU Computing - CUDA
 cupy-cuda11x>=12.0                     # CuPy for GPU-accelerated NumPy operations
@@ -29,6 +33,8 @@ opencv-python-headless>=4.8.0          # Headless OpenCV (for servers)
 # Data & Serialization
 pydantic>=2.0                          # Data validation
 python-dotenv>=1.0                     # Environment configuration
+PyYAML>=6.0                            # YAML config files
+requests>=2.31.0                       # Webhook delivery
 
 # Logging & Monitoring
 tqdm>=4.65.0                           # Progress bars
@@ -115,3 +121,13 @@ psutil>=5.9.0                          # System and process utilities
 # Conflicts with system packages:
 #   - Use virtual environment to isolate dependencies
 #   - Don't install globally unless necessary
+
+# ==========================================
+# PERSONAL GAZE MODEL TRAINING DEPENDENCIES
+# (appended by update_requirements.py)
+# ==========================================
+torch>=2.0.0               # PyTorch deep learning
+torchvision>=0.15.0        # ResNet-18 pre-trained weights
+onnx>=1.15.0               # ONNX model format
+onnxruntime-gpu>=1.16.0    # ONNX Runtime with CUDA
+Pillow>=10.0.0             # Image loading/saving
