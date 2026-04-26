@@ -1,0 +1,34 @@
+# gestures.yaml - Gaze and Hand Gesture Command Mapping
+# Edit this file to customize what each gesture does.
+# Changes take effect on next app launch.
+# Commands: SCROLL_UP, SCROLL_DOWN, LEFT, RIGHT, CLICK, DOUBLE_CLICK,
+#           VOLUME_UP, VOLUME_DOWN, BACK, HOME, EMERGENCY_ALERT,
+#           CALL_NURSE, ADJUST_BED, SLEEP_MODE
+
+gaze_directions:
+  LOOK_UP:         SCROLL_UP
+  LOOK_DOWN:       SCROLL_DOWN
+  LOOK_LEFT:       LEFT
+  LOOK_RIGHT:      RIGHT
+  LOOK_UP_LEFT:    VOLUME_UP
+  LOOK_UP_RIGHT:   VOLUME_DOWN
+  LOOK_DOWN_LEFT:  BACK
+  LOOK_DOWN_RIGHT: HOME
+
+blink_gestures:
+  SINGLE_BLINK:    CLICK
+  DOUBLE_BLINK:    DOUBLE_CLICK
+  LONG_BLINK:      SLEEP_MODE
+  EYES_CLOSED_5S:  EMERGENCY_ALERT
+
+sequences:
+  LEFT_RIGHT_LEFT:   CALL_NURSE
+  UP_DOWN_UP:        ADJUST_BED
+  RIGHT_LEFT_RIGHT:  BACK
+
+hand_gestures:
+  THUMB_UP:        SCROLL_UP
+  THUMB_DOWN:      SCROLL_DOWN
+  PEACE_SIGN:      CLICK
+  OPEN_PALM:       SLEEP_MODE
+  FIST:            EMERGENCY_ALERT
