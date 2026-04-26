@@ -18,9 +18,9 @@ try:
     import cupy as cp
     CUPY_AVAILABLE = True
     logger.info("✓ CuPy available - GPU Kalman filter enabled")
-except ImportError:
+except Exception as exc:
     CUPY_AVAILABLE = False
-    logger.info("CuPy not available - using NumPy Kalman filter (CPU)")
+    logger.info(f"CuPy unavailable ({exc}) - using NumPy Kalman filter (CPU)")
 
 
 @dataclass
