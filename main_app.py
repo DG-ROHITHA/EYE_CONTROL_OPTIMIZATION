@@ -4,19 +4,21 @@ Production-grade eye-tracking system with GPU acceleration, strain monitoring, a
 Part of the NeuroGaze Elite comprehensive rebuild
 """
 
-import cv2
-import numpy as np
-import mediapipe as mp
-from mediapipe.tasks import python as mp_python
-from mediapipe.tasks.python import vision
-
+import os
 import time
 import logging
 import argparse
 import platform
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 from collections import deque
+from dataclasses import dataclass, field
+
+import cv2
+import numpy as np
+import mediapipe as mp
+from mediapipe.tasks import python as mp_python
+from mediapipe.tasks.python import vision
 
 # Import all NeuroGaze Elite modules
 from pipeline import CUDAPipeline
@@ -34,14 +36,95 @@ from fusion import GazeFusionEngine, FusionConfig, FusionMode, IntentScore as Fu
 from hand_calibration import HandProfileCalibrator, CalibrationState
 from hand_hud import GestureHUDRenderer, GestureDisplayInfo, HUDMode as GestureHUDMode
 from cmd_map import GestureCommandMapper
-from caregiver_alerts import CaregiverAlertManager
 
-# Configure logging
+# Read log level from environment or default to INFO
+_log_level = os.environ.get("NEUROGAZE_LOG_LEVEL", "INFO").upper()
+_handlers = [logging.StreamHandler()]
+_file_handler_error = None
+try:
+    _log_path = Path(__file__).parent / "neurogaze.log"
+    _handlers.append(logging.FileHandler(_log_path, mode="a", encoding="utf-8"))
+except Exception as exc:
+    _file_handler_error = str(exc)
+
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=getattr(logging, _log_level, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+    handlers=_handlers,
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("neurogaze")
+if _file_handler_error:
+    logger.warning(f"File logging disabled: {_file_handler_error}")
+
+try:
+    import yaml
+    _YAML_AVAILABLE = True
+except Exception:
+    _YAML_AVAILABLE = False
+
+try:
+    from caregiver_alerts import CaregiverAlertManager
+    _CAREGIVER_AVAILABLE = True
+    _CAREGIVER_IMPORT_ERROR = ""
+except Exception as exc:
+    _CAREGIVER_AVAILABLE = False
+    _CAREGIVER_IMPORT_ERROR = str(exc)
+
+if not _CAREGIVER_AVAILABLE:
+    logger.debug(f"caregiver_alerts.py not found - caregiver alerts disabled ({_CAREGIVER_IMPORT_ERROR})")
+
+
+@dataclass
+class AppConfig:
+    """App configuration defaults."""
+    CAMERA_INDEX: int = 0
+    DWELL_TIME: float = 1.2
+    SMOOTHING_FRAMES: int = 3
+    SIMULATION_MODE: bool = True
+
+
+@dataclass
+class AppState:
+    """Runtime session tracking."""
+    session_start_time: float = field(default_factory=time.time)
+    commands_fired: int = 0
+    commands_by_type: Dict[str, int] = field(default_factory=dict)
+    fatigue_events: int = 0
+    breaks_taken: int = 0
+    last_microsleep: bool = False
+    last_break_due: bool = False
+
+
+def load_config_yaml(config_obj: AppConfig) -> AppConfig:
+    """Load config.yaml and override Config dataclass fields."""
+    config_path = Path(__file__).parent / "config.yaml"
+    if not config_path.exists():
+        return config_obj
+    if not _YAML_AVAILABLE:
+        logger.warning("PyYAML not available; config.yaml ignored")
+        return config_obj
+    try:
+        with config_path.open("r", encoding="utf-8") as f:
+            yaml_cfg = yaml.safe_load(f) or {}
+
+        cam = yaml_cfg.get("camera", {})
+        config_obj.CAMERA_INDEX = cam.get("index", config_obj.CAMERA_INDEX)
+
+        gaze = yaml_cfg.get("gaze", {})
+        config_obj.DWELL_TIME = gaze.get("dwell_time", config_obj.DWELL_TIME)
+        config_obj.SMOOTHING_FRAMES = gaze.get("smoothing_frames", config_obj.SMOOTHING_FRAMES)
+
+        app = yaml_cfg.get("app", {})
+        config_obj.SIMULATION_MODE = app.get("simulation_mode", config_obj.SIMULATION_MODE)
+
+        logger.info(f"Config loaded from {config_path}")
+    except Exception as exc:
+        logger.warning(f"Could not load config.yaml: {exc} - using defaults")
+    return config_obj
+
+
+APP_CONFIG = load_config_yaml(AppConfig())
 
 # Platform-specific flags
 CV2_AVAILABLE = True  # OpenCV is required anyway, but check for safety
@@ -58,7 +141,8 @@ class NeuroGazeElite:
         enable_gpu: bool = True,
         enable_live_mode: bool = False,
         simulation_mode: bool = True,
-        hud_mode: str = "standard"
+        hud_mode: str = "standard",
+        config: Optional[AppConfig] = None
     ):
         """
         Initialize NeuroGaze Elite.
@@ -74,10 +158,14 @@ class NeuroGazeElite:
         logger.info("=" * 60)
         
         # Configuration
+        self.config = config or APP_CONFIG
         self.enable_gpu = enable_gpu
         self.live_mode = enable_live_mode
         self.simulation_mode = simulation_mode
         self.running = True
+
+        # Session state
+        self.state = AppState()
         
         # Screen info
         try:
@@ -118,6 +206,7 @@ class NeuroGazeElite:
         # Intent detection
         self.intent_engine = IntentEngine()
         self.command_gatekeeper = CommandGatekeeper()
+        self.intent_engine.MIN_DELIBERATE_DWELL_MS = self.config.DWELL_TIME * 1000.0
         
         # Strain monitoring
         strain_config = StrainGuardConfig()
@@ -191,7 +280,13 @@ class NeuroGazeElite:
         )
 
         # Caregiver alerts (webhook + audio)
-        self.alert_manager = CaregiverAlertManager()
+        self.caregiver = None
+        if _CAREGIVER_AVAILABLE:
+            try:
+                self.caregiver = CaregiverAlertManager()
+                logger.info("Caregiver alert system initialized")
+            except Exception as exc:
+                logger.warning(f"Caregiver alerts failed to init: {exc}")
         
         # Hand gesture state tracking
         self.hand_calibration_active = False
@@ -215,22 +310,27 @@ class NeuroGazeElite:
     def _init_camera(self) -> None:
         """Initialize camera"""
         logger.info("Initializing camera...")
-        
-        self.cap = cv2.VideoCapture(0)
-        time.sleep(0.5)
-        
-        if not self.cap.isOpened():
-            logger.error("Failed to open camera!")
-            raise RuntimeError("Camera not available")
-        
-        self.camera_width = 1280
-        self.camera_height = 720
-        
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
-        
+        self.cap = self._open_camera(self.config.CAMERA_INDEX)
+        self.camera_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.camera_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         logger.info(f"✓ Camera initialized ({self.camera_width}x{self.camera_height})")
+
+    def _open_camera(self, index: int, max_retries: int = 5) -> cv2.VideoCapture:
+        """Open camera with retry loop. Critical for unattended assistive use."""
+        for attempt in range(1, max_retries + 1):
+            cap = cv2.VideoCapture(index)
+            if cap.isOpened():
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                cap.set(cv2.CAP_PROP_FPS, 30)
+                logger.info(f"Camera {index} opened on attempt {attempt}")
+                return cap
+            logger.warning(f"Camera {index} not found (attempt {attempt}/{max_retries})")
+            time.sleep(2)
+        raise RuntimeError(
+            f"Camera index {index} unavailable after {max_retries} attempts.\n"
+            "Check: is the webcam plugged in? Try a different index in config.yaml."
+        )
     
     def _init_mediapipe(self) -> None:
         """Initialize MediaPipe FaceLandmarker with GPU delegate if available"""
@@ -392,14 +492,22 @@ class NeuroGazeElite:
             return
 
         if command_name in {"EMERGENCY_ALERT", "CALL_NURSE"}:
-            self.alert_manager.send_alert(
-                alert_type=command_name,
-                severity="critical",
-                message="Emergency gesture detected",
-                metadata={"source": "hand_gesture"}
-            )
+            if command_name == "EMERGENCY_ALERT":
+                logger.critical("EMERGENCY ALERT triggered")
+            if self.caregiver is not None:
+                try:
+                    self.caregiver.send_alert(
+                        alert_type=command_name,
+                        severity="critical",
+                        message="Emergency gesture detected",
+                        metadata={"source": "hand_gesture"}
+                    )
+                except Exception as exc:
+                    logger.error(f"Caregiver alert failed: {exc}")
 
-        self._enqueue_command(command_name)
+        if self._enqueue_command(command_name):
+            self.state.commands_fired += 1
+            self.state.commands_by_type[command_name] = self.state.commands_by_type.get(command_name, 0) + 1
     
     def _handle_keyboard_input(self, key: int) -> bool:
         """
@@ -542,7 +650,15 @@ class NeuroGazeElite:
                 # Read frame
                 ret, frame = self.cap.read()
                 if not ret:
-                    logger.warning("Failed to read frame")
+                    logger.warning("Frame read failed - attempting camera reconnect...")
+                    self.cap.release()
+                    try:
+                        self.cap = self._open_camera(self.config.CAMERA_INDEX)
+                        self.camera_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        self.camera_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    except RuntimeError as exc:
+                        logger.error(str(exc))
+                        break
                     continue
                 
                 # Resize for processing
@@ -600,6 +716,12 @@ class NeuroGazeElite:
                         
                         # Update strain guard
                         strain_metrics = self.strain_guard.update(ear_value)
+                        if strain_metrics.microsleep_detected and not self.state.last_microsleep:
+                            self.state.fatigue_events += 1
+                        self.state.last_microsleep = bool(strain_metrics.microsleep_detected)
+                        if strain_metrics.break_due and not self.state.last_break_due:
+                            self.state.breaks_taken += 1
+                        self.state.last_break_due = bool(strain_metrics.break_due)
                         
                         # Intent analysis
                         dwell_duration_ms = self.intent_engine.update_dwell(gaze_position)
@@ -738,6 +860,39 @@ class NeuroGazeElite:
         
         finally:
             self._cleanup()
+
+    def _print_session_summary(self, session_stats: Dict[str, float]) -> None:
+        """Log and save session summary on exit."""
+        duration = time.time() - self.state.session_start_time
+        mins = int(duration // 60)
+        secs = int(duration % 60)
+
+        summary = {
+            "duration_seconds": int(duration),
+            "commands_fired": self.state.commands_fired,
+            "commands_by_type": self.state.commands_by_type,
+            "avg_blink_rate": round(float(session_stats.get("avg_blink_rate", 0.0)), 1),
+            "fatigue_events": self.state.fatigue_events,
+            "breaks_taken": self.state.breaks_taken,
+            "session_date": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        logger.info("-" * 45)
+        logger.info(f"Session ended - {mins}m {secs}s")
+        logger.info(f"Commands fired : {summary['commands_fired']}")
+        logger.info(f"Avg blink rate : {summary['avg_blink_rate']}/min")
+        logger.info(f"Fatigue events : {summary['fatigue_events']}")
+        logger.info(f"Breaks taken   : {summary['breaks_taken']}")
+        logger.info("-" * 45)
+
+        log_path = Path(__file__).parent / "session_log.json"
+        try:
+            import json
+            with log_path.open("w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2)
+            logger.info(f"Saved -> {log_path.name}")
+        except Exception as exc:
+            logger.warning(f"Could not save session log: {exc}")
     
     def _cleanup(self) -> None:
         """Clean up resources"""
@@ -760,6 +915,8 @@ class NeuroGazeElite:
             )
             self.profile_manager.save_profile(self.current_profile)
         
+        self._print_session_summary(session_stats)
+
         # Stop command worker
         if self.command_worker:
             worker_stats = self.command_worker.get_stats()
@@ -794,9 +951,14 @@ def main():
     
     args = parser.parse_args()
     
+    config = load_config_yaml(AppConfig())
     enable_gpu = not args.no_gpu
     live_mode = args.live
-    simulation_mode = not args.execute
+    simulation_mode = config.SIMULATION_MODE
+    if args.execute:
+        simulation_mode = False
+    elif args.simulate:
+        simulation_mode = True
     hud_mode = args.hud
     
     try:
@@ -804,7 +966,8 @@ def main():
             enable_gpu=enable_gpu,
             enable_live_mode=live_mode,
             simulation_mode=simulation_mode,
-            hud_mode=hud_mode
+            hud_mode=hud_mode,
+            config=config,
         )
         app.run()
     
