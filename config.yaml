@@ -1,0 +1,54 @@
+# NeuroGaze Elite - User Configuration
+# Edit this file to change settings without touching Python code.
+# All settings here override defaults in main_app.py.
+
+camera:
+  index: 0                    # Webcam index (0 = default, 1 = external)
+  width: 640
+  height: 480
+  auto_exposure: true
+
+gaze:
+  model: personal_gaze_model  # Name of ONNX model in models/ folder
+                             # Use "none" to disable neural gaze (MediaPipe only)
+  smoothing_frames: 3         # Kalman smoothing window (higher = smoother but slower)
+  dwell_time: 1.2             # Seconds to trigger dwell click
+  click_radius: 25            # Pixels - how close gaze must stay for dwell
+
+intent:
+  velocity_slow: 10           # px/frame - below this = deliberate gaze
+  velocity_fast: 80           # px/frame - above this = accidental glance
+  confidence_threshold: 0.70  # 0-1, minimum to fire a command
+
+calibration:
+  auto_calibrate_seconds: 30  # Passive EAR calibration window on startup
+  profile_path: neurogaze_profile.json
+
+strain:
+  enable: true
+  blink_alert_below: 8        # blinks/min - alert if below this
+  perclos_alert: 0.10         # fraction - alert at 10%
+  perclos_critical: 0.15      # fraction - pause commands at 15%
+  break_interval_minutes: 20  # 20-20-20 rule interval
+  session_hard_break_minutes: 45
+
+hand_gestures:
+  enable: true
+  model_path: hand_landmarker.task
+  fusion_mode: EYE_LEADS_HAND_CONFIRMS  # Options: EYE_ONLY, HAND_ONLY,
+                                        # EYE_LEADS_HAND_CONFIRMS,
+                                        # PARALLEL, HAND_OVERRIDE
+
+caregiver:
+  enable: false               # Set true to enable caregiver alert system
+  contact_method: log         # Options: log, email, sms (configure below)
+  email: ""                   # Caregiver email (if contact_method: email)
+  sms_number: ""              # Caregiver phone (if contact_method: sms)
+
+app:
+  simulation_mode: true       # true = print commands, false = execute them
+  hud_mode: standard          # Options: standard, minimal, debug, off
+  enable_cursor: true
+  log_level: INFO             # DEBUG, INFO, WARNING, ERROR
+  log_file: neurogaze.log
+  session_log: true           # Save session summary to session_log.json
