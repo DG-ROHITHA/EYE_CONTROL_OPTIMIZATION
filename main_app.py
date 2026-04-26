@@ -64,15 +64,13 @@ except Exception:
     _YAML_AVAILABLE = False
 
 try:
-    from caregiver_alerts import CaregiverAlertManager
-    _CAREGIVER_AVAILABLE = True
-    _CAREGIVER_IMPORT_ERROR = ""
+    from caregiver_alerts import CaregiverAlertManager as CaregiverAlerts
+    _CAREGIVER_OK = True
 except Exception as exc:
-    _CAREGIVER_AVAILABLE = False
-    _CAREGIVER_IMPORT_ERROR = str(exc)
+    _CAREGIVER_OK = False
+    logging.warning(f"caregiver_alerts disabled: {exc}")
 
-if not _CAREGIVER_AVAILABLE:
-    logger.debug(f"caregiver_alerts.py not found - caregiver alerts disabled ({_CAREGIVER_IMPORT_ERROR})")
+_CAREGIVER_AVAILABLE = _CAREGIVER_OK
 
 
 @dataclass
@@ -283,7 +281,7 @@ class NeuroGazeElite:
         self.caregiver = None
         if _CAREGIVER_AVAILABLE:
             try:
-                self.caregiver = CaregiverAlertManager()
+                self.caregiver = CaregiverAlerts()
                 logger.info("Caregiver alert system initialized")
             except Exception as exc:
                 logger.warning(f"Caregiver alerts failed to init: {exc}")
@@ -671,8 +669,10 @@ class NeuroGazeElite:
                 gaze_velocity = None
                 ear_value = 0.5
                 intent_score = None
+                strain_metrics = None
                 
-                if results and results.face_landmarks:
+                face_detected = bool(results and results.face_landmarks)
+                if face_detected:
                     face_landmarks = results.face_landmarks[0]
                     
                     # Extract gaze
@@ -795,9 +795,10 @@ class NeuroGazeElite:
                 self.fps_history.append(fps)
                 avg_fps = np.mean(self.fps_history) if self.fps_history else 0
                 
-                # Render HUD
+                # Render HUD (always use raw frame as base)
+                display_frame = frame.copy()
                 display_frame = self.hud_renderer.render_frame(
-                    frame,
+                    display_frame,
                     gaze_position=gaze_position,
                     gaze_velocity=gaze_velocity,
                     intent_confidence=intent_score.confidence if intent_score else None,
@@ -810,6 +811,17 @@ class NeuroGazeElite:
                     backend_info=self.cuda_pipeline.get_backend_info(),
                     mode_info=f"{'LIVE' if self.live_mode else 'SIM'} - {self.cuda_pipeline.backend.value}"
                 )
+
+                if not face_detected:
+                    cv2.putText(
+                        display_frame,
+                        "No face detected - look at camera",
+                        (20, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (0, 255, 255),
+                        2,
+                    )
                 
                 # Add Hand Gesture Overlay (NEW)
                 if self.gesture_overlay_visible and self.current_gesture_result:
