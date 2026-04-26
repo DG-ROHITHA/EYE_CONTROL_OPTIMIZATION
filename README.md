@@ -1,144 +1,157 @@
-Eye Control Assistive System
-A camera-based eye tracking application that enables hands-free computer control for users with limited mobility. Uses real-time iris tracking, blink detection, and gesture sequences to execute system commands.
+# NeuroGaze
 
-Features
+NeuroGaze is a camera-based assistive control system for hands-free computer interaction. It combines eye tracking, blink intent detection, hand gestures, and eye-hand fusion to improve safety and reduce accidental commands.
 
-8-Direction Gaze Control — Cardinal (UP, DOWN, LEFT, RIGHT) and diagonal directions
-Blink Detection — Single blink, double blink, long blink (3s), and eyes-closed (5s) triggers
-Sequence Patterns — Multi-step gesture sequences for assistive commands (e.g., Call Nurse)
-Simulation Mode — Safe testing mode where commands are logged but not executed
-5-Point Calibration — Improves direction detection accuracy by 50–70%
-Audio Feedback — Beep confirmation on command execution
-Visual HUD — Minimap, EAR indicator, progress bars, and sequence buffer display
+The project supports both simulation mode (safe, no system input) and execution mode (real mouse/keyboard actions).
 
+## Core Capabilities
 
-Requirements
-Python 3.8+
-OpenCV
-dlib or MediaPipe (face/iris landmarks)
-pyautogui (live mode command execution)
+- Eye tracking with MediaPipe Face Landmarker
+- Optional GPU-accelerated preprocessing with OpenCV CUDA
+- Kalman-based gaze smoothing and velocity tracking
+- Intent gating using dwell and movement analysis
+- Eye strain monitoring (blink rate, PERCLOS, break reminders)
+- Hand gesture recognition and eye-hand fusion modes
+- Command worker process for non-blocking system actions
+- On-screen HUD with standard, minimal, and debug modes
+- User profile persistence and calibration workflows
+
+## Project Entry Point
+
+Primary launcher:
+
+- main.py (recommended)
+
+Equivalent direct launcher:
+
+- main_app.py
+
+## Requirements
+
+- Windows, Linux, or macOS
+- Python 3.8+
+- Webcam
+- MediaPipe face model file: face_landmarker.task in project root
+
 Install dependencies:
-bashpip install opencv-python mediapipe pyautogui
 
-Quick Start
-powershellcd r:\ROHI\webcame_dectection
-python eye_control_assistive.py
-On launch, the app starts in Simulation Mode (safe by default). No commands are executed until you switch to Live mode.
-Keyboard Controls
-KeyActionCStart 5-point calibrationMToggle Simulation ↔ Live modeSPACEEnable / disable cursor movementESCExit application
+	pip install -r requirements_cuda.txt
 
-Command Reference
-Gaze Directions
-Eye MovementCommandLive Mode ActionLook UPSCROLL_UPScroll page upLook DOWNSCROLL_DOWNScroll page downLook LEFTLEFTLeft arrow keyLook RIGHTRIGHTRight arrow keyLook UP-LEFTVOLUME_UPIncrease system volumeLook UP-RIGHTBRIGHTNESS_UPIncrease screen brightnessLook DOWN-LEFTBACKBrowser back buttonLook DOWN-RIGHTHOMEPress Home key
-Blink Gestures
-GestureCommandLive Mode ActionSingle blinkCLICKMouse clickDouble blinkDOUBLE_CLICKDouble clickLong blink (3s)EMERGENCY_ALERTAlarm sound + alertEyes closed (5s)SLEEP_MODEEnter rest mode
-Sequence Patterns
-SequenceCommandLive Mode ActionLEFT → RIGHT → LEFTCALL_NURSEBeep notificationUP → DOWN → UPADJUST_BEDBeep notification
+If you want a CPU-only lightweight install for quick testing:
 
-Configuration
-All settings are in the Config class inside eye_control_assistive.py:
-python# Safety
-SIMULATION_MODE = True          # Start in safe mode (recommended)
-COMMAND_COOLDOWN = 0.8          # Seconds between commands
-GESTURE_COOLDOWN = 0.5          # Seconds between direction gestures
+	pip install opencv-python mediapipe numpy pyautogui sounddevice
 
-# Blink Detection
-EAR_THRESHOLD = 0.21            # Eye Aspect Ratio blink threshold
-LONG_BLINK_TIME = 3.0           # Seconds for emergency alert
-EYES_CLOSED_SLEEP = 5.0         # Seconds for sleep mode
+## Quick Start
 
-# Direction Zones (0.0 – 1.0 normalized)
-LOOK_LEFT_THRESHOLD = 0.35
-LOOK_RIGHT_THRESHOLD = 0.65
-LOOK_UP_THRESHOLD = 0.30
-LOOK_DOWN_THRESHOLD = 0.70
+From the project root:
 
-# Feature Toggles
-ENABLE_BASIC_CONTROLS = True
-ENABLE_ADVANCED_CONTROLS = True
-ENABLE_ASSISTIVE_CONTROLS = True
-ENABLE_AUDIO_FEEDBACK = True
-Presets
-Limited eye movement:
-pythonLOOK_LEFT_THRESHOLD = 0.40
-LOOK_RIGHT_THRESHOLD = 0.60
-COMMAND_COOLDOWN = 1.5
-Experienced users:
-pythonCOMMAND_COOLDOWN = 0.5
-GESTURE_COOLDOWN = 0.3
-Sensitive blink detection:
-pythonEAR_THRESHOLD = 0.23
-BLINK_FRAMES = 1
+	python main.py
 
-Screen Layout
-┌──────────────────────────────────────────────┐
-│ Top-Left:               Top-Right:           │
-│  • Gaze coordinates      • Minimap           │
-│  • Calibration status    • Direction zones   │
-│  • Control mode          • Current direction │
-├──────────────────────────────────────────────┤
-│                                              │
-│         • Red dot = iris position            │
-│         • Circle = dwell progress            │
-│         • Command confirmation overlay       │
-│                                              │
-├──────────────────────────────────────────────┤
-│ Bottom-Left:            Bottom-Right:        │
-│  • Sequence buffer       • EAR value         │
-│  • Dwell progress bar    • Blink indicator   │
-│  • Long blink timer                          │
-│  • Sleep mode timer                          │
-└──────────────────────────────────────────────┘
+This starts in simulation mode by default when app.simulation_mode is true in config.yaml.
 
-Getting Started (Recommended Progression)
-Week 1 — Foundation
+### Useful CLI Flags
 
-Run in Simulation mode only
-Enable Basic Controls only
-15-minute sessions; focus on consistent direction gestures
+- --no-gpu: disable CUDA path and force CPU processing
+- --live: start with live mode enabled in UI state
+- --execute: enable real command execution (not simulation)
+- --simulate: force simulation mode
+- --hud minimal|standard|debug: set initial HUD mode
 
-Week 2 — Blinks
+Examples:
 
-Enable Advanced Controls
-Practice single and double blink clicks
-Try diagonal gaze directions
+	python main.py --no-gpu --hud debug
+	python main.py --execute --live
 
-Week 3 — Sequences
+## Keyboard Controls
 
-Enable Assistive Controls
-Practice the emergency and call nurse sequences
+- C: start 5-point gaze calibration
+- M: toggle live/simulation mode
+- H: toggle gaze heatmap
+- B: toggle blue-light filter overlay
+- G: toggle gesture overlay
+- F: cycle fusion mode
+- R: reset heatmap and strain counters
+- Space: cycle HUD mode (minimal, standard, debug)
+- Esc: exit
 
-Week 4 — Live Mode
+## Configuration
 
-Switch to Live mode under supervision
-Start with simple scrolling and clicking tasks
-Monitor for eye strain; take 5-minute breaks every 15 minutes
+Main runtime configuration is in config.yaml. Key sections:
 
+- camera: webcam index and resolution
+- gaze: smoothing and dwell behavior
+- intent: confidence and velocity thresholds
+- calibration: profile and startup calibration behavior
+- strain: eye-health thresholds and break timing
+- hand_gestures: enable flag and fusion mode
+- caregiver: optional alert routing
+- app: simulation mode, HUD mode, logging
 
-Safety Guidelines
+Gesture command mappings are in gestures.yaml.
 
-✅ Have a caregiver present during initial live-mode sessions
-✅ Keep a backup call system available at all times
-✅ Test the emergency alert sequence with audio off first
-✅ Re-calibrate daily or whenever camera position changes
-✅ Document preferred settings for each individual user
+## Safety Notes
 
+- Keep simulation mode enabled while tuning settings.
+- Switch to execution mode only after calibration and validation.
+- If used for assistive care workflows, test emergency gestures with a caregiver present.
+- Recalibrate when camera position, seating position, or lighting changes.
 
-Troubleshooting
-ProblemSolutionNo face detectedImprove lighting; center face in camera frameBlinks not registeringIncrease EAR_THRESHOLD (try 0.23)Direction detection inaccurateRun calibration (C key)Commands firing accidentallyIncrease COMMAND_COOLDOWN
+## Training a Personal Gaze Model
 
-Project Files
-FileDescriptioneye_control_assistive.pyMain applicationUSER_GUIDE.mdDetailed usage instructionsTESTING_GUIDE.mdStep-by-step testing and validationconfig_commands.txtFull configuration referenceIMPLEMENTATION_SUMMARY.mdFeature overview and change log
+Current training flow:
 
-Testing Checklist
+1. Collect data:
+	 python gaze_recorder.py
+2. Prepare dataset:
+	 python prep_data.py
+3. Train model:
+	 python train_gaze.py
+4. Export model:
+	 python export_model.py
+5. Validate model:
+	 python check_model.py
 
-Run the application — camera feed should appear
-Press C — complete 5-point calibration
-Look UP — console shows COMMAND: SCROLL_UP
-Look DOWN — console shows COMMAND: SCROLL_DOWN
-Blink once — console shows COMMAND: CLICK
-Blink twice quickly — console shows COMMAND: DOUBLE_CLICK
-Look UP-LEFT — console shows COMMAND: VOLUME_UP
-Do LEFT → RIGHT → LEFT — console shows COMMAND: CALL_NURSE
-All passing? Press M to enable Live mode and test one real command
+Model artifacts are expected in the models directory and/or user model cache paths used by gaze_inference.py.
+
+## Validation and Tests
+
+Smoke/integration test:
+
+	python test_integration.py
+
+Legacy optimization checks:
+
+	python test_perf.py
+
+## Important Files
+
+- main.py: top-level launcher
+- main_app.py: full NeuroGaze runtime
+- config.yaml: runtime settings
+- gestures.yaml: gesture-to-command mapping
+- pipeline.py: CUDA/CPU preprocessing pipeline
+- gaze_inference.py: DL-based secondary gaze validation
+- hand_engine.py: hand gesture recognition
+- fusion.py: eye-hand fusion logic
+- eye_health.py: strain and fatigue monitoring
+- worker.py: command execution worker process
+- HOW_TO_TRAIN.md: model training notes
+- CHEATSHEET.txt: quick operator reference
+
+## Troubleshooting
+
+- No camera feed:
+	check camera index in config.yaml (camera.index) and close other camera apps.
+- Face model not found:
+	ensure face_landmarker.task exists in project root.
+- Low FPS:
+	run with --no-gpu if CUDA setup is unstable, reduce camera resolution in config.yaml.
+- Commands not executing:
+	verify simulation mode is off (app.simulation_mode false or use --execute).
+- Gesture mappings not matching expectations:
+	review gestures.yaml and restart app.
+
+## Notes on Legacy Scripts
+
+This repository contains older scripts (for example eye_control_assistive.py and eye_control_optimized.py) kept for experimentation and comparison. The current production path is main.py -> main_app.py.
 
