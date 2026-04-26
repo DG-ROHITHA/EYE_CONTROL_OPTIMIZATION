@@ -1,0 +1,54 @@
+# -- Python cache --------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# -- Virtual environments -------------------------
+venv/
+env/
+neurogaze_env/
+.venv/
+
+# -- Personal biometric data (NEVER commit) ------
+neurogaze_profile.json
+session_log.json
+session_log_*.json
+
+# -- Training data -------------------------------
+training_data/frames/
+training_data/processed/
+training_data/*.pkl
+
+# -- Trained model weights -----------------------
+models/checkpoints/
+models/*.onnx
+models/*.pth
+models/*.trt
+# Keep models/.gitkeep so folder exists in repo
+
+# -- Logs -----------------------------------------
+*.log
+neurogaze.log
+logs/
+
+# -- Environment / secrets ------------------------
+.env
+.env.local
+config.local.yaml
+
+# -- OS files -------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -- IDE ------------------------------------------
+.vscode/
+.idea/
+*.code-workspace
+
+# -- Test artifacts -------------------------------
+.pytest_cache/
+htmlcov/
+.coverage
