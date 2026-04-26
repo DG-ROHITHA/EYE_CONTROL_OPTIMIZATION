@@ -52,3 +52,8 @@ desktop.ini
 .pytest_cache/
 htmlcov/
 .coverage
+
+# -- Local camera diagnostics ---------------------
+cam_*.jpg
+assets/probe_*.png
+assets/readme-hero.png
