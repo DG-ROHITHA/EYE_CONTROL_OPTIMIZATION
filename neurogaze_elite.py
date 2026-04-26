@@ -19,21 +19,22 @@ from typing import Optional, Tuple
 from collections import deque
 
 # Import all NeuroGaze Elite modules
-from cuda_pipeline import CUDAPipeline
-from strain_guard import StrainGuard, StrainGuardConfig
-from adaptive_calibration import AdaptiveEARCalibrator, UserProfileManager, CalibrationScreenManager
-from kalman_gaze import KalmanGaze, KalmanState
-from intent_engine import IntentEngine, CommandGatekeeper, IntentLevel
-from command_worker import CommandWorkerProcess, CommandType, cross_platform_beep
-from hud_renderer import HUDRenderer, HUDMode
-from dl_inference import DLInferenceEngine, CrossValidationResult
+from pipeline import CUDAPipeline
+from eye_health import StrainGuard, StrainGuardConfig
+from calibration import AdaptiveEARCalibrator, UserProfileManager, CalibrationScreenManager
+from smoother import KalmanGaze, KalmanState
+from intent import IntentEngine, CommandGatekeeper, IntentLevel
+from worker import CommandWorkerProcess, CommandType, cross_platform_beep
+from hud import HUDRenderer, HUDMode
+from gaze_inference import DLInferenceEngine, CrossValidationResult
 
 # Hand gesture modules
-from hand_gesture_engine import HandGestureEngine, GestureConfig as HandGestureConfig
-from gesture_fusion import GazeFusionEngine, FusionConfig, FusionMode, IntentScore as FusionIntentScore
-from gesture_calibration import HandProfileCalibrator, CalibrationState
-from gesture_hud import GestureHUDRenderer, GestureDisplayInfo, HUDMode as GestureHUDMode
-from gesture_command_map import GestureCommandMapper
+from hand_engine import HandGestureEngine, GestureConfig as HandGestureConfig
+from fusion import GazeFusionEngine, FusionConfig, FusionMode, IntentScore as FusionIntentScore
+from hand_calibration import HandProfileCalibrator, CalibrationState
+from hand_hud import GestureHUDRenderer, GestureDisplayInfo, HUDMode as GestureHUDMode
+from cmd_map import GestureCommandMapper
+from caregiver_alerts import CaregiverAlertManager
 
 # Configure logging
 logging.basicConfig(
@@ -188,6 +189,9 @@ class NeuroGazeElite:
             frame_height=int(self.camera_height),
             mode=GestureHUDMode.STANDARD
         )
+
+        # Caregiver alerts (webhook + audio)
+        self.alert_manager = CaregiverAlertManager()
         
         # Hand gesture state tracking
         self.hand_calibration_active = False
@@ -370,6 +374,32 @@ class NeuroGazeElite:
         except:
             # Fallback to neutral pose
             return (0.0, 0.0, 0.0)
+
+    def _enqueue_command(self, command_name: str) -> bool:
+        """Enqueue a command using the gatekeeper, supporting older API names."""
+        if hasattr(self.command_gatekeeper, "enqueue"):
+            return bool(self.command_gatekeeper.enqueue(command_name))
+        return bool(self.command_gatekeeper.add_command(command_name))
+
+    def _handle_fusion_command(self, command_name: str) -> None:
+        """Handle high-priority commands before queueing."""
+        if command_name == "CANCEL_COMMAND":
+            try:
+                self.command_gatekeeper.queue.clear()
+                self.command_gatekeeper.last_commands.clear()
+            except Exception:
+                pass
+            return
+
+        if command_name in {"EMERGENCY_ALERT", "CALL_NURSE"}:
+            self.alert_manager.send_alert(
+                alert_type=command_name,
+                severity="critical",
+                message="Emergency gesture detected",
+                metadata={"source": "hand_gesture"}
+            )
+
+        self._enqueue_command(command_name)
     
     def _handle_keyboard_input(self, key: int) -> bool:
         """
@@ -613,8 +643,24 @@ class NeuroGazeElite:
                         
                         # Route fused command to gatekeeper
                         if fusion_result.should_execute and fusion_result.command:
-                            self.command_gatekeeper.enqueue(fusion_result.command)
-                            logger.debug(f"Fused command: {fusion_result.command.value} (source: {fusion_result.source})")
+                            command_key = fusion_result.command.value
+                            command_map = {
+                                "mouse_click": "CLICK",
+                                "mouse_double_click": "DOUBLE_CLICK",
+                                "scroll_up": "SCROLL_UP",
+                                "scroll_down": "SCROLL_DOWN",
+                                "scroll_mode_toggle": "SCROLL_MODE_TOGGLE",
+                                "cancel_command": "CANCEL_COMMAND",
+                                "confirm": "CONFIRM",
+                                "reject": "REJECT",
+                                "emergency_alert": "EMERGENCY_ALERT",
+                                "call_nurse": "CALL_NURSE",
+                                "cursor_override_start": "CURSOR_OVERRIDE_START",
+                                "cursor_override_end": "CURSOR_OVERRIDE_END",
+                            }
+                            command_name = command_map.get(command_key, command_key.upper())
+                            self._handle_fusion_command(command_name)
+                            logger.debug(f"Fused command: {command_name} (source: {fusion_result.source})")
                         
                         # Process calibration if active
                         if self.calibration_active:
