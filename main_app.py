@@ -316,7 +316,7 @@ class NeuroGazeElite:
     def _open_camera(self, index: int, max_retries: int = 5) -> cv2.VideoCapture:
         """Open camera with retry loop. Critical for unattended assistive use."""
         for attempt in range(1, max_retries + 1):
-            cap = cv2.VideoCapture(index)
+            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
             if cap.isOpened():
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
