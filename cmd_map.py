@@ -165,6 +165,17 @@ class GestureCommandMapper:
                             description=gesture_config.get("description", "") if isinstance(gesture_config, dict) else "",
                         )
                         self.known_gestures.add(gesture_name)
+
+            # Forward-compatible defaults: keep user overrides but add any missing gestures.
+            for gesture_name, command in self.DEFAULT_MAPPING.items():
+                if gesture_name not in self.mappings:
+                    self.mappings[gesture_name] = GestureMapping(
+                        gesture_name=gesture_name,
+                        command=command,
+                        priority=500,
+                        description="",
+                    )
+                    self.known_gestures.add(gesture_name)
             
             self.last_mtime = os.path.getmtime(self.config_path)
             logger.info(f"✓ Loaded {len(self.mappings)} gesture mappings from {self.config_path}")
