@@ -59,6 +59,7 @@ class CommandType(Enum):
     PLAY_PAUSE = "play_pause"
     NEXT_TRACK = "next_track"
     PREV_TRACK = "prev_track"
+    SLEEP_MODE = "sleep_mode"
 
 
 @dataclass
@@ -80,16 +81,15 @@ class GestureCommandMapper:
     
     # Default mapping (fallback if YAML unavailable)
     DEFAULT_MAPPING = {
-        "pinch": CommandType.MOUSE_CLICK,
-        "double_pinch": CommandType.MOUSE_DOUBLE_CLICK,
-        "open_palm_hold": CommandType.SCROLL_MODE_TOGGLE,
-        "fist": CommandType.CANCEL_COMMAND,
         "two_finger_swipe_up": CommandType.SCROLL_UP,
         "two_finger_swipe_down": CommandType.SCROLL_DOWN,
-        "thumb_up": CommandType.CONFIRM,
-        "thumb_down": CommandType.REJECT,
-        "index_point": CommandType.CURSOR_OVERRIDE_START,
-        "three_finger_spread": CommandType.EMERGENCY_ALERT,
+        "two_finger_swipe_left": CommandType.LEFT,
+        "two_finger_swipe_right": CommandType.RIGHT,
+        "index_point_click": CommandType.MOUSE_CLICK,
+        "open_palm_hold": CommandType.SLEEP_MODE,
+        "thumb_up": CommandType.VOLUME_UP,
+        "thumb_down": CommandType.VOLUME_DOWN,
+        "fist": CommandType.EMERGENCY_ALERT,
     }
     
     def __init__(self, config_path: Optional[Path] = None):
