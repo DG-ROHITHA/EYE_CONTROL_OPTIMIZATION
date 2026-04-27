@@ -45,9 +45,12 @@ class GestureType(Enum):
     FIST = "fist"
     TWO_FINGER_SWIPE_UP = "two_finger_swipe_up"
     TWO_FINGER_SWIPE_DOWN = "two_finger_swipe_down"
+    TWO_FINGER_SWIPE_LEFT = "two_finger_swipe_left"
+    TWO_FINGER_SWIPE_RIGHT = "two_finger_swipe_right"
     THUMB_UP = "thumb_up"
     THUMB_DOWN = "thumb_down"
     INDEX_POINT = "index_point"
+    INDEX_POINT_CLICK = "index_point_click"
     THREE_FINGER_SPREAD = "three_finger_spread"
     OPEN_HAND = "open_hand"
     PEACE_SIGN = "peace_sign"
@@ -405,11 +408,24 @@ class HandGestureEngine:
             distance(hand.landmarks[RING_TIP], hand.landmarks[RING_MCP]) < self.config.fist_finger_curl_threshold * hand_scale
         )
         
-        if is_two_finger and abs(hand.wrist_velocity[0]) > self.config.swipe_velocity_threshold:
-            swipe_direction = GestureType.TWO_FINGER_SWIPE_UP if hand.wrist_velocity[1] < 0 else GestureType.TWO_FINGER_SWIPE_DOWN
+        vx, vy = hand.wrist_velocity
+        speed_x = abs(vx)
+        speed_y = abs(vy)
+        min_speed = self.config.swipe_velocity_threshold
+
+        if is_two_finger and (speed_x > min_speed or speed_y > min_speed):
+            # Determine primary direction by whichever axis moves more
+            if speed_y >= speed_x:
+                # Vertical swipe - vy negative = moving up on screen = SWIPE_UP
+                swipe_direction = GestureType.TWO_FINGER_SWIPE_UP if vy < 0 else GestureType.TWO_FINGER_SWIPE_DOWN
+                confidence = min(1.0, speed_y / (min_speed * 2))
+            else:
+                # Horizontal swipe - vx negative = moving left = SWIPE_LEFT
+                swipe_direction = GestureType.TWO_FINGER_SWIPE_LEFT if vx < 0 else GestureType.TWO_FINGER_SWIPE_RIGHT
+                confidence = min(1.0, speed_x / (min_speed * 2))
             return GestureResult(
                 gesture_type=swipe_direction,
-                confidence=min(1.0, abs(hand.wrist_velocity[0]) / (self.config.swipe_velocity_threshold * 2)),
+                confidence=confidence,
                 hand=hand,
                 hand_position=(hand.landmarks[MIDDLE_TIP].x, hand.landmarks[MIDDLE_TIP].y),
                 inference_time_ms=self._get_avg_inference_time(),
@@ -440,14 +456,29 @@ class HandGestureEngine:
         )
         
         if is_index_point:
+            # Track how long index point is held
+            now = time.time()
+            if not hasattr(self, '_index_point_start'):
+                self._index_point_start = {}
+            hand_id = hand.handedness
+            if hand_id not in self._index_point_start:
+                self._index_point_start[hand_id] = now
+            hold_duration = now - self._index_point_start[hand_id]
+            # After 0.8s of holding index point -> treat as click
+            gesture_t = GestureType.INDEX_POINT_CLICK if hold_duration >= 0.8 else GestureType.INDEX_POINT
             return GestureResult(
-                gesture_type=GestureType.INDEX_POINT,
+                gesture_type=gesture_t,
                 confidence=0.88,
                 hand=hand,
                 hand_position=(hand.landmarks[INDEX_TIP].x, hand.landmarks[INDEX_TIP].y),
                 inference_time_ms=self._get_avg_inference_time(),
-                landmarks_detected=len(hand.landmarks)
+                landmarks_detected=len(hand.landmarks),
+                gesture_metadata={"hold_duration": hold_duration}
             )
+        else:
+            # Reset index point timer when gesture released
+            if hasattr(self, '_index_point_start') and hand.handedness in self._index_point_start:
+                del self._index_point_start[hand.handedness]
         
         # Check THREE_FINGER_SPREAD (index, middle, ring extended and spread)
         is_three_finger = (
